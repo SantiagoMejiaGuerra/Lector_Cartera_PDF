@@ -30,7 +30,7 @@ def extract(text, pdf_file):
             "Numero Factura": factura[0],
             "Valor Bruto": factura[1],
             "Valor Neto": factura[2],
-            "Archivo": pdf_file
+            "Archivo": pdf_file.name
         }
         for factura in data.get("Facturas",[])
     ]
@@ -81,7 +81,7 @@ def main():
                         if len(pdf.pages) >page_num:
                             page = pdf.pages[page_num]
                             text = page.extract_text() or ""
-                            current_result = extract(text, uploaded_file)
+                            current_result = extract(text, uploaded_file.name)
                             if current_result:
                                 result.extend(current_result)
                                 break
@@ -92,9 +92,6 @@ def main():
                     st.warning(f"No se encontraron datos en {uploaded_file.name}")
             except Exception as e:
                 st.error(f"Error procesando el archivo {uploaded_file}: {str(e)}")
-                errors.append(uploaded_file.name)
-            except Exception as e:
-                st.warning(f"Formato no reconocido en {uploaded_file.name}: {str(e)}")
                 errors.append(uploaded_file.name)
     
         # Show result
