@@ -81,7 +81,7 @@ def main():
                         if len(pdf.pages) >page_num:
                             page = pdf.pages[page_num]
                             text = page.extract_text() or ""
-                            current_result = extract(text, uploaded_file.name)
+                            current_result = extract(text, uploaded_file)
                             if current_result:
                                 result.extend(current_result)
                                 break
