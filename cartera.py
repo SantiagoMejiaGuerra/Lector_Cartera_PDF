@@ -30,20 +30,27 @@ def extract(text, pdf_file):
             "Numero Factura": factura[0],
             "Valor Bruto": factura[1],
             "Valor Neto": factura[2],
-            "Archvio": pdf_file.name
+            "Archivo": pdf_file
         }
         for factura in data.get("Facturas",[])
     ]
     
+    nuevos_resultados = []
     for resultado in resultados:
         valor_bruto = int(resultado["Valor Bruto"].replace(".", ""))
         valor_neto = int(resultado["Valor Neto"].replace(".", ""))
-        
         retencion = valor_bruto - valor_neto
-        
         resultado["Retención"] = retencion
+        resultado_restructurado ={
+            "Numero Factura": resultado["Numero Factura"],
+            "Valor Bruto": resultado["Valor Bruto"],
+            "Retención" : resultado["Retención"],
+            "Valor Neto": resultado["Valor Neto"],
+            "Archivo": resultado["Archivo"]
+        }
+        nuevos_resultados.append(resultado_restructurado)
     
-    return resultados
+    return nuevos_resultados
 
 def main():
     st.title("Procesador de PDFs Seguros del Estado")
