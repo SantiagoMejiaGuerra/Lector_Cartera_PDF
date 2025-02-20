@@ -35,6 +35,14 @@ def extract(text, pdf_file):
         for factura in data.get("Facturas",[])
     ]
     
+    for resultado in resultados:
+        valor_bruto = int(resultado["Valor Bruto"].replace(".", ""))
+        valor_neto = int(resultado["Valor Neto"].replace(".", ""))
+        
+        retencion = valor_bruto - valor_neto
+        
+        resultado["Retención"] = retencion
+    
     return resultados
 
 def main():
