@@ -60,15 +60,39 @@ def extract(text, pdf_file):
     
     return nuevos_resultados
 
-def previsora_excel(excel_file):
-    df = pd.read_excel(excel_file, header=8)
-    df = df.drop(columns=[col for col in df.columns if "Unnamed" in col], errors='ignore')
-    # df["N°. Doc. de cobro"] = df["N°. Doc. de cobro"].astype()
-    df = df[["Fecha Solicitud de pago","N°. Doc. de cobro", " Valor Reclamado", "Valor pagado", "Valor Objetado", "I.V.A.", "Retención en la fuente", "I.C.A. - ImP. Ind y Ccio"]]
-    df.dropna(inplace= True)
-    df["Archivo"] = excel_file.name
-    return df
-
+def process_excel(excel_file):
+    try:
+        df = pd.read_excel(excel_file, header=8)
+        df.columns = df.columns.astype(str)
+        df = df.drop(columns=[col for col in df.columns if "Unnamed" in col], errors='ignore')
+        
+        columnas_previsora = ["Fecha Solicitud de pago", "N°. Doc. de cobro", " Valor Reclamado", 
+                            "Valor pagado", "Valor Objetado", "I.V.A.", 
+                            "Retención en la fuente", "I.C.A. - ImP. Ind y Ccio"]
+        
+        if all(col in df.columns for col in columnas_previsora):
+            df = df[columnas_previsora]
+            df.dropna(inplace=True)
+            df["Archvio"] = excel_file.name
+            return df
+        
+        adres = pd.read_excel(excel_file, header=5)
+        adres = adres.drop(columns=[col for col in adres.columns if "Unnamed" in col], errors='ignore')
+        
+        columnas_adres = ["Numero Paquete", "Factura", "Valor Reclamado", 
+                        "Valor aprobado", "Valor glosado", "Honorarios", "Compras"]
+        
+        if all(col in adres.columns for col in columnas_adres):
+            adres= adres[columnas_adres]
+            adres["Retencion"] = (adres["Valor glosado"]*0.02) + (adres["Honorarios"]*0.11) + (adres["Compras"] * 0.025)
+            adres["Neto"] = adres["Valor aprobado"] - adres["Retencion"]
+            adres["Archivo"] = excel_file.name
+            return adres
+        
+        raise ValueError("⚠️El archivo no coincide con ninguno de los formatos esperados.⚠️")
+    except Exception as e:
+        return f"Error al procesar el archivo: {str(e)}"
+        
 def main():
 
     st.image("LOGO_RED_SLOGM-02.png", width=300, use_container_width=True)
@@ -129,7 +153,7 @@ def main():
             st.warning("Por favor sube al menos un archivo PDF")
     
     # Sección para procesar Excel
-    st.header("Procesar Excel Previsora")
+    st.header("Procesar Excel")
     uploaded_excel = st.file_uploader("Sube tu archivo Excel", 
                                     type=["xlsx", "xls"],
                                     accept_multiple_files=True,
@@ -139,26 +163,39 @@ def main():
         if uploaded_excel:
             try:
                 dfs = []
+                errores = []
                 
                 for excel_file in uploaded_excel:
-                    df = previsora_excel(excel_file)
-                    dfs.append(df)
+                    df = process_excel(excel_file)
+                    
+                    if isinstance(df, str):
+                        errores.append(df)
+                    else:
+                        dfs.append(df)
                 
-                df_excel = pd.concat(dfs, ignore_index=True)
+                if errores:
+                    for error_msg in errores:
+                        st.error(error_msg)
+                if dfs:
+                    df_excel = pd.concat(dfs, ignore_index=True)
                 
-                st.success("¡Procesamiento de Excel completado!")
-                st.dataframe(df_excel)
+                    st.success("¡Procesamiento de Excel completado!")
+                    st.dataframe(df_excel)
                 
-                #Creacion de excel
-                output = BytesIO()
-                with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                    df_excel.to_excel(writer, index=False)
-                st.download_button(
-                    label="Descargar Excel Procesando",
-                    data = output.getvalue(),
-                    file_name="excel_procesado.xlsx",
-                    mime="application/vnd.ms-excel"
-                )
+                    #Creacion de excel
+                    output = BytesIO()
+                    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                        df_excel.to_excel(writer, index=False, sheet_name="Datos procesados")
+                        writer.close()
+                    
+                    st.download_button(
+                        label="Descargar Excel Procesado",
+                        data = output.getvalue(),
+                        file_name="excel_procesado.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                else:
+                    st.warning("No se pudo procesar ningún archivo correctamente")
             except Exception as e:
                 st.error(f"Error procesando Excel: {str(e)}")
         else:
