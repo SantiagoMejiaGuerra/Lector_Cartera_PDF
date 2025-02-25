@@ -9,7 +9,7 @@ def seg_estado(text):
     data = {"Facturas":[]}
     
     #Analyze Values
-    reasearch = r"^(\d{8,})\s+\$\s*([\d.,]+)\s+\$\s*([\d.,]+)"
+    reasearch = r"^(\d{6,})\s+\$\s*([\d.,]+)\s+\$\s*([\d.,]+)"
     matches = re.findall(reasearch, text, re.MULTILINE)
     
     for match in matches:
