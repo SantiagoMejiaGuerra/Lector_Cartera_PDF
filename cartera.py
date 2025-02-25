@@ -79,12 +79,12 @@ def process_excel(excel_file):
         adres = pd.read_excel(excel_file, header=5)
         adres = adres.drop(columns=[col for col in adres.columns if "Unnamed" in col], errors='ignore')
         
-        columnas_adres = ["Numero Paquete", "Factura", "Valor Reclamado", 
-                        "Valor aprobado", "Valor glosado", "Honorarios", "Compras"]
+        columnas_adres = ["Numero Paquete", "Factura", "Valor Reclamado", "Valor aprobado", 
+                        "Valor glosado","Servicios médicos", "Honorarios", "Compras"]
         
         if all(col in adres.columns for col in columnas_adres):
             adres= adres[columnas_adres]
-            adres["Retencion"] = (adres["Valor glosado"]*0.02) + (adres["Honorarios"]*0.11) + (adres["Compras"] * 0.025)
+            adres["Retencion"] = (adres["Servicios médicos"]*0.02) + (adres["Honorarios"]*0.11) + (adres["Compras"] * 0.025)
             adres["Neto"] = adres["Valor aprobado"] - adres["Retencion"]
             adres["Archivo"] = excel_file.name
             return adres
