@@ -190,13 +190,6 @@ def procesar_mundial(archivos, nit, selection_entidad, plan_entidad):
         
     return pd.concat(data, ignore_index=True)
 
-def find_header_sura(archivo, search_column="Factura"):
-    df_temp = pd.read_excel(archivo, header=None)
-    for i, row in df_temp.iterrows():
-        if search_column in row.values:
-            return i
-    return 0
-
 def procesar_sura(archivos, nit, selection_entidad, plan_entidad):
     data = []
     
@@ -205,24 +198,7 @@ def procesar_sura(archivos, nit, selection_entidad, plan_entidad):
         "RteFete", "RteICA", "RteIVA", "Vlr Consignado"
     ]
     
-    for archivo in archivos:
-        header_row = find_header_sura(archivo, search_column="Factura")
-        
-        df = pd.read_excel(archivo, header = header_row)
-        
-        if not set(columns_requires).issubset(df.columns):
-            st.write(f"El archivo {archivo.name if hasattr(archivo, 'name') else archivo} no contiene todas las columnas requeridas.")
-            continue
-        
-        df = df[columns_requires]
-        
-        df["SUMA RETENCIONES"] = df["RteFete"] + df["RteICA"]
-        df["NIT"] = nit
-        df["PLAN"] = plan_entidad
-        df["ASEGURADORA"] = selection_entidad
-        df["CASO"] = ""
-        
-        df.rename(columns={
+    column_name_mapping = {
             "Fecha Consignacion":"FECHA",
             "Factura":"APLICA A FV",
             "Vlr Factura":"VR. FACTURA",
@@ -231,15 +207,125 @@ def procesar_sura(archivos, nit, selection_entidad, plan_entidad):
             "RteICA": "(-) ICA",
             "RteIVA":"IVA",
             "Vlr Consignado":"VR. RECAUDADO"
-        })
+        }
+    
+    for archivo in archivos:
+        
+        archivo.seek(0)
+        df = pd.read_excel(archivo, header=None)
+        
+        # Search 'Beneficiario' for any part of the sheet
+        header_row = None
+        
+        for idx, row in df.iterrows():
+            clean_row= [str(cell).strip().lower() for cell in row.fillna('')]
+            if 'expediente' in clean_row:
+                header_row = idx
+                break
+        
+        if header_row is None:
+            header_row = df.dropna(how='all').index[0]
+        
+        archivo.seek(0)
+        df = pd.read_excel(archivo, header=header_row)
+        df.columns = df.columns.astype(str).str.strip()
+        
+        missing_cols = [col for col in columns_requires if col not in df.columns]
+        
+        if missing_cols:
+            st.error(f"Archivo {archivo.name}: Faltan columnas: {', '.join(missing_cols)}")
+            st.write("Columnas encontradas:", df.columns.tolist())
+            continue
+        
+        df = df.rename(columns=column_name_mapping)
+        
+        df["SUMA RETENCIONES"] = df["(-) RETEF"].fillna(0) + df["(-) ICA"].fillna(0)
+        df["NIT"] = nit
+        df["PLAN"] = plan_entidad
+        df["ASEGURADORA"] = selection_entidad
+        df["CASO"] = ""
+        df["ARCHIVOS"] = archivo.name
+        df["FECHA"] = pd.to_datetime(df["FECHA"], format="%Y%m%d").dt.date
         
         columnas_ordenadas = ["FECHA", "NIT", "PLAN", "ASEGURADORA", "CASO", "APLICA A FV",
                             "VR. FACTURA", "VR. BRUTO TOMADO POR ASEGURADORA", "(-) RETEF", 
-                            "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDADO"]
+                            "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDADO",  "ARCHIVOS"]
+        
+        data.append(df[columnas_ordenadas])
+        
+    return pd.concat(data, ignore_index=True) if data else pd.DataFrame()
+
+def procesar_liberty(archivos, nit, selection_entidad, plan_entidad):
+    data = []
+    
+    for archivo in archivos:
+        df = pd.read_excel(archivo)
+        df = df[["FECHA GIRO" ,"NRO FACTURA", "VALOR LIQUIDADO", "VALOR RETEFUENTE", "VALOR PAGADO"]]
+        
+        df["NIT"] = nit
+        df["PLAN"] = plan_entidad
+        df["ASEGURADORA"] = selection_entidad
+        df["CASO"] = ""
+        df["VR. BRUTO TOMADO POR ASEGURADORA"] = df["VALOR LIQUIDADO"]
+        df["IVA"] = 0
+        df["(-) ICA"] = 0
+        df["SUMA RETENCIONES"] = df["VALOR RETEFUENTE"] + df["(-) ICA"]
+        df["ARCHIVO"] = archivo.name
+        
+        df = df.rename(columns={
+            "FECHA GIRO": "FECHA",
+            "NRO FACTURA":"APLICA A FV",
+            "VALOR LIQUIDADO":"VR. FACTURA",
+            "VALOR RETEFUENTE":"(-) RETEF",
+            "VALOR PAGADO":"VR. RECAUDADO"
+        })
+        
+        columnas_ordenadas = ["FECHA", "NIT", "PLAN", "ASEGURADORA", "CASO",
+                            "APLICA A FV", "VR. FACTURA", "VR. BRUTO TOMADO POR ASEGURADORA",
+                            "(-) RETEF", "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", "ARCHIVO"]
         
         df = df.reindex(columns=columnas_ordenadas, fill_value="")
+        
         data.append(df)
+    
     return pd.concat(data, ignore_index=True)
+
+def procesar_bolivar(archivos, nit, selection_entidad, plan_entidad):
+    data = []
+    
+    for archivo in archivos:
+        df = pd.read_excel(archivo)
+        df = df[["Fecha de Pago", "Detalle", "Rte. ICA", "Rte Fuente", "Valor pago"]]
+        
+        df["NIT"]=nit
+        df["PLAN"]=plan_entidad
+        df["ASEGURADORA"] =selection_entidad
+        df["CASO"] = ""
+        df["VR. FACTURA"] = 0
+        df["IVA"] = 0
+        df["ARCHIVO"] = archivo.name
+        
+        df["VR. BRUTO TOMADO POR ASEGURADORA"] = df["Valor pago"] / 0.98
+        df["(-) RETEF"] = df["VR. BRUTO TOMADO POR ASEGURADORA"] * 0.02
+        df["SUMA RETENCIONES"] = df["(-) RETEF"] + df["Rte. ICA"]
+        
+        df = df.rename(columns={
+            "Fecha de Pago":"FECHA",
+            "Detalle":"APLICA A FV",
+            "Valor pago":"VR. RECAUDADO",
+            "Rte. ICA":"(-) ICA",
+        })
+        
+        columnas_ordenadas=["FECHA", "NIT", "ASEGURADORA", "CASO", "APLICA A FV", "VR. FACTURA",
+                            "VR. BRUTO TOMADO POR ASEGURADORA", "(-) RETEF", "(-) ICA", "IVA",
+                            "SUMA RETENCIONES", "VR. RECAUDADO"]
+        
+        df = df.reindex(columns=columnas_ordenadas, fill_value="")
+        
+        data.append(df)
+    
+    return pd.concat(data, ignore_index=True)
+        
 
 #PDF SECTION
 # def procesar_seg_estado(archivos, nit, selection_entidad, plan_entidad):
@@ -252,9 +338,17 @@ funcion_procesamiento = {
     "AXA COLPATRIA MEDICINA PREPAGADA": procesar_axa,
     "ADMINISTRADORA DE LOS RECURSOS DEL SISTEMA GENERAL DE SEGURIDAD SOCIAL EN SALUD - ADRES":procesar_adres,
     "LA PREVISORA SA COMPAÑÍA DE SEGUROS":procesar_previsora,
+    "FIDEICOMISOS PATRIMONIOS AUTÓNOMOS FIDUCIARIA LA PREVISORA S.A.": procesar_previsora,
     "LA PREVISORA S A COMPANIA DE SEGURO": procesar_previsora,
     "COMPAÑIA MUNDIAL DE SEGUROS SA": procesar_mundial,
-    "SEGUROS GENERALES SURAMERICANA SA": procesar_sura
+    "SEGUROS GENERALES SURAMERICANA SA": procesar_sura,
+    "EPS SURAMERICANA": procesar_sura,
+    "EPS Y MEDICINA PREPAGADA SURAMETICANA S A":procesar_sura,
+    "SEGUROS DE VIDA SURAMERICANA SA": procesar_sura,
+    "LIBERTY SEGUROS SA": procesar_liberty,
+    "LIBERTY SEGUROS DE VIDA SA": procesar_liberty,
+    "SEGUROS COMERCIALES BOLIVAR": procesar_bolivar,
+    "ARL SEGUROS BOLIVAR":procesar_bolivar
 }
 
 #Carga de archivos
