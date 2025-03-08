@@ -46,7 +46,7 @@ else:
     plan_entidad = ""
 
 #EXCEL SECTION
-def procesar_axa(archivos, nit, selection_plan, selection_entidad):
+def procesar_axa(archivos, nit, selection_entidad, plan_entidad):
     data = []
     for archivo in archivos:
         df = pd.read_excel(archivo)
@@ -56,7 +56,7 @@ def procesar_axa(archivos, nit, selection_plan, selection_entidad):
         df["ICA"] = df["Retención"] - df["Rete. Servicios"]
         
         df["NIT"] = nit
-        df["PLAN"] = selection_plan
+        df["PLAN"] = plan_entidad
         df["ASEGURADORA"] = selection_entidad
         df["CASO"] = ""
         df["IVA"] = 0
@@ -147,7 +147,7 @@ def procesar_previsora(archivos, nit,selection_entidad, plan_entidad):
         
         columnas_ordenadas =["FECHA", "NIT", "PLAN", "ASEGURADORA", "CASO", "APLICA A FV",
                             "VR. FACTURA", "VR. BRUTO TOMADO POR ASEGURADORA", "(-) RETEF", 
-                            "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDADO"]
+                            "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", "Archivo"]
         
         df = df.reindex(columns=columnas_ordenadas, fill_value="")
         
