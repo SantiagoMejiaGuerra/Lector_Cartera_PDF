@@ -347,6 +347,39 @@ def procesar_seg_estado(archivos, nit, selection_entidad, plan_entidad):
                 
                 facturas = []
                 if re.search(r"www\.sis\.co[\.,]", total_text, re.IGNORECASE):
+                    fecha_doc = None
+                    fecha = r"""
+                    (?:Bogotá, D\.C\.,\s*)?  # Ignorar prefijo geográfico
+                        (\d{1,2}\s+de\s+[a-z]+\s+de\s+\d{4})|  # Formato textual
+                        (Fecha\s*[^:]*:\s*(\d{2}-\d{2}-\d{4}))|  # Fecha con etiqueta
+                        (\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b)  # Formatos numéricos
+                    """
+                    match_fecha = re.search(fecha, total_text, re.IGNORECASE | re.VERBOSE)
+                    
+                    if match_fecha:
+                        try:
+                            #Prioriza formato textual
+                            if match_fecha.group(1):
+                                day, month, year = re.match(r"(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})",
+                                                            match_fecha.group(1)).groups()
+                                meses = {
+                                    'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04',
+                                    'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08',
+                                    'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12'
+                                }
+                                fecha_doc = f"{day.zfill(2)}/{meses[month.lower()]}/{year}"
+                                
+                            elif match_fecha.group(3):
+                                day, month, year = match_fecha.group(3).split('-')
+                                fecha_doc = f"{day}/{month}/{year}"
+                                
+                            elif match_fecha.group(4):
+                                separador = '/' if '/' in match_fecha.group(4) else '-'
+                                day, month, year = match_fecha.group(4).split(separador)
+                                fecha_doc = f"{day}/{month}/{year}"
+                        except Exception as e:
+                            print(f"Error procesando fecha : {str(e)}")
+                    
                     matches = re.findall(r"(\d{6,8})\s+\$\s*([\d.,]+)\s+\$\s*([\d.,]+)", total_text)
                     
                     for match in matches:
@@ -355,7 +388,7 @@ def procesar_seg_estado(archivos, nit, selection_entidad, plan_entidad):
                             valor_neto = float(match[2].replace(".", "").replace(",", "."))
                             
                             facturas.append({
-                                "FECHA": "",
+                                "FECHA": fecha_doc,
                                 "NIT":nit,
                                 "PLAN": plan_entidad,
                                 "ASEGURADORA": selection_entidad,
