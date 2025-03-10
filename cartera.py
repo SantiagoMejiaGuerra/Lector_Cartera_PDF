@@ -202,7 +202,6 @@ def procesar_sura(archivos, nit, selection_entidad, plan_entidad):
             "Fecha Consignacion":"FECHA",
             "Factura":"APLICA A FV",
             "Vlr Factura":"VR. FACTURA",
-            "Vlr Orden de Pago":"VR. BRUTO TOMADO POR ASEGURADORA",
             "RteFete": "(-) RETEF",
             "RteICA": "(-) ICA",
             "RteIVA":"IVA",
@@ -246,6 +245,7 @@ def procesar_sura(archivos, nit, selection_entidad, plan_entidad):
         df["CASO"] = ""
         df["ARCHIVOS"] = archivo.name
         df["FECHA"] = pd.to_datetime(df["FECHA"], format="%Y%m%d").dt.date
+        df["VR. BRUTO TOMADO POR ASEGURADORA"] = df["VR. FACTURA"]
         
         columnas_ordenadas = ["FECHA", "NIT", "PLAN", "ASEGURADORA", "CASO", "APLICA A FV",
                             "VR. FACTURA", "VR. BRUTO TOMADO POR ASEGURADORA", "(-) RETEF", 
