@@ -325,7 +325,7 @@ def procesar_bolivar(archivos, nit, selection_entidad, plan_entidad):
         data.append(df)
     
     return pd.concat(data, ignore_index=True)
-        
+
 
 #PDF SECTION
 def procesar_seg_estado(archivos, nit, selection_entidad, plan_entidad):
@@ -411,6 +411,63 @@ def procesar_seg_estado(archivos, nit, selection_entidad, plan_entidad):
             continue
     return pd.DataFrame(data) if data else pd.DataFrame()
 
+def procesar_equidad(archivos, nit, selection_entidad, plan_entidad):
+    data = []
+    
+    for pdf_file in archivos:
+        try:
+            with pdfplumber.open(pdf_file) as pdf:
+                total_text = "\n".join([page.extract_text() or "" for page in pdf.pages])
+                
+                # Extract document Date
+                fecha_match = re.search(r"Fecha:\s*(\d{2}\.\d{2}\.\d{4})", total_text)
+                fecha = fecha_match.group(1).replace(".", "/") if fecha_match else "Fecha no Econtrada"
+                
+                patron_facturas = r"""
+                    (\d{10})\D+       # Doc. Pagado
+                    (\d{4})\D+        # Año
+                    (\w{2})\D+        # Cl. Doc
+                    (\d+)\D+          # Nro. Documento
+                    (\d+)\D+          # Cuota
+                    (\d+)\D+          # Ramo
+                    (\S+)\D+          # Póliza
+                    (\d+)\D+          # Factura
+                    ([-\d.,]+)        # Neto a Pagar
+                """
+                facturas = re.findall(patron_facturas, total_text, re.VERBOSE)
+                
+                for factura in facturas:
+                    try:
+                        
+                        neto_str= factura[8].replace(".","").replace(",", ".").replace("-", "")
+                        
+                        neto_pagar = float(neto_str)
+                        bruto = neto_pagar / 0.98 if 0.98 !=0 else 0
+                        
+                        data.append({
+                            "FECHA": fecha,
+                            "NIT": nit,
+                            "PLAN": plan_entidad,
+                            "ASEGURADORA":selection_entidad,
+                            "CASO":"",
+                            "APLICA FV": factura[7],
+                            "VR. FACTURA": 0,
+                            "VR. BRUTO TOMADO POR ASEGURADORA": bruto,
+                            "(-) RETEF": bruto * 0.02,
+                            "(-) ICA":0,
+                            "IVA": 0,
+                            "SUMA RETENCIONES": bruto * 0.02,
+                            "VR. RECAUDADO": neto_pagar,
+                            "Archivo": pdf_file.name
+                        })
+                    except Exception as e:
+                        print(f"Error procesando factura {factura}: {str(e)}")
+    
+        except Exception as e:
+            print(f"Error procesando {pdf_file.name}: {str(e)}")
+    return pd.DataFrame(data) if data else pd.DataFrame(columns=["FECHA", "NIT","PLAN","ASEGURADORA","CASO",
+                            "APLICA FV","VR. FACTURA","VR. BRUTO TOMADO POR ASEGURADORA", "(-) RETEF","(-) ICA",
+                            "IVA","SUMA RETENCIONES","VR. RECAUDADO","Archivo"])
 
 # Diccionario de funciones por entidad
 funcion_procesamiento = {
@@ -432,6 +489,8 @@ funcion_procesamiento = {
     "ARL SEGUROS BOLIVAR":procesar_bolivar,
     "SEGUROS DEL ESTADO SA":procesar_seg_estado,
     "SEGUROS DE VIDA DEL ESTADO S A":procesar_seg_estado,
+    "LA EQUIDAD SEGUROS GENERALES":procesar_equidad,
+    "LA EQUIDAD SEGUROS DE VIDA ORGANISMO CORPORATIVO": procesar_equidad
 }
 
 #Carga de archivos
