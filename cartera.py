@@ -328,8 +328,55 @@ def procesar_bolivar(archivos, nit, selection_entidad, plan_entidad):
         
 
 #PDF SECTION
-# def procesar_seg_estado(archivos, nit, selection_entidad, plan_entidad):
+def procesar_seg_estado(archivos, nit, selection_entidad, plan_entidad):
+    data = []
     
+    for pdf_file in archivos:
+        try:
+            with pdfplumber.open(pdf_file) as pdf:
+                total_text = ""
+                
+                # Extract text in the first 2 pages
+                for i, pagina in enumerate(pdf.pages[:2]):
+                    text = pagina.extract_text() or ""
+                    total_text += f"\n{text}"
+                    
+                    #Search SISCO once
+                    if i == 0 and not re.search(r"www\.sis\.co[\.,]", text, re.IGNORECASE):
+                        break
+                
+                facturas = []
+                if re.search(r"www\.sis\.co[\.,]", total_text, re.IGNORECASE):
+                    matches = re.findall(r"(\d{6,8})\s+\$\s*([\d.,]+)\s+\$\s*([\d.,]+)", total_text)
+                    
+                    for match in matches:
+                        try:
+                            valor_bruto = float(match[1].replace(".", "").replace(",", "."))
+                            valor_neto = float(match[2].replace(".", "").replace(",", "."))
+                            
+                            facturas.append({
+                                "NIT":nit,
+                                "PLAN": plan_entidad,
+                                "ASEGURADORA": selection_entidad,
+                                "CASO": "",
+                                "APLICA FV": match[0],
+                                "VR. FACTURA":valor_neto,
+                                "VR. BRUTO TOMADO POR ASEGURADORA":valor_bruto,
+                                "(-) RETEF": valor_bruto * 0.02,
+                                "(-) ICA":valor_bruto * 0.0066,
+                                "IVA": 0,
+                                "SUMA RETENCIONES":(valor_bruto *0.02) + (valor_bruto * 0.0066),
+                                "VR. RECAUDADO": valor_neto,
+                                "Archivo": pdf_file.name
+                            })
+                        except Exception as e:
+                            print(f"Error en factura {match}: {str(e)}")
+                data.extend(facturas)
+        except Exception as e:
+            print(f"Error procesando {pdf_file.name}: {str(e)}")
+            continue
+    return pd.DataFrame(data) if data else pd.DataFrame()
+
 
 # Diccionario de funciones por entidad
 funcion_procesamiento = {
@@ -348,7 +395,8 @@ funcion_procesamiento = {
     "LIBERTY SEGUROS SA": procesar_liberty,
     "LIBERTY SEGUROS DE VIDA SA": procesar_liberty,
     "SEGUROS COMERCIALES BOLIVAR": procesar_bolivar,
-    "ARL SEGUROS BOLIVAR":procesar_bolivar
+    "ARL SEGUROS BOLIVAR":procesar_bolivar,
+    "SEGUROS DEL ESTADO SA":procesar_seg_estado
 }
 
 #Carga de archivos
