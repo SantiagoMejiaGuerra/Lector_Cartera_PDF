@@ -355,12 +355,13 @@ def procesar_seg_estado(archivos, nit, selection_entidad, plan_entidad):
                             valor_neto = float(match[2].replace(".", "").replace(",", "."))
                             
                             facturas.append({
+                                "FECHA": "",
                                 "NIT":nit,
                                 "PLAN": plan_entidad,
                                 "ASEGURADORA": selection_entidad,
                                 "CASO": "",
                                 "APLICA FV": match[0],
-                                "VR. FACTURA":valor_neto,
+                                "VR. FACTURA": 0,
                                 "VR. BRUTO TOMADO POR ASEGURADORA":valor_bruto,
                                 "(-) RETEF": valor_bruto * 0.02,
                                 "(-) ICA":valor_bruto * 0.0066,
@@ -396,7 +397,8 @@ funcion_procesamiento = {
     "LIBERTY SEGUROS DE VIDA SA": procesar_liberty,
     "SEGUROS COMERCIALES BOLIVAR": procesar_bolivar,
     "ARL SEGUROS BOLIVAR":procesar_bolivar,
-    "SEGUROS DEL ESTADO SA":procesar_seg_estado
+    "SEGUROS DEL ESTADO SA":procesar_seg_estado,
+    "SEGUROS DE VIDA DEL ESTADO S A":procesar_seg_estado,
 }
 
 #Carga de archivos
