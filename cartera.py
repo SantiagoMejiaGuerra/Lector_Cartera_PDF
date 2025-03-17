@@ -123,7 +123,7 @@ def procesar_previsora(archivos, nit,selection_entidad, plan_entidad):
     for archivo in archivos:
         df = pd.read_excel(archivo, header=8)
         df = df.drop(columns=['Unnamed: 7', 'Unnamed: 8', 'Unnamed: 9', 'Unnamed: 21'])
-        df["N°. Doc. de cobro"] = df["N°. Doc. de cobro"].astype(str)
+        df["N°. Doc. de cobro"] = df["N°. Doc. de cobro"]
         df = df[["Fecha Solicitud de pago","N°. Doc. de cobro", " Valor Reclamado", "Valor pagado", "Valor Objetado", "I.V.A.", "Retención en la fuente", "I.C.A. - ImP. Ind y Ccio"]]
         df["SUMA RETENCIONES"] = df["Retención en la fuente"] + df["I.C.A. - ImP. Ind y Ccio"]
         df["VR. RECAUDADO"] = df["Valor pagado"] - df["Retención en la fuente"]
@@ -325,6 +325,20 @@ def procesar_bolivar(archivos, nit, selection_entidad, plan_entidad):
         data.append(df)
     
     return pd.concat(data, ignore_index=True)
+
+def procesar_nueva_eps(archivos, nit, selection_entidad, plan_entidad):
+    data = []
+    
+    for archivo in archivos:
+        df = pd.read_excel(archivo)
+        df = df[["Fecha Legalización", "Número Factura", "Valor Aplicación"]]
+        
+        df["NIT"] = nit
+        df["PLAN"] = plan_entidad
+        df["ASEGURADORA"] = selection_entidad
+        df["CASO"] = ""
+        df["(-) RETEF"] = df["Valor Aplicación"] * 0.02
+        
 
 
 #PDF SECTION
