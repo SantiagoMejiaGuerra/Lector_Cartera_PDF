@@ -121,12 +121,14 @@ def procesar_adres(archivos, nit, selection_entidad, plan_entidad):
 def procesar_previsora(archivos, nit,selection_entidad, plan_entidad):
     data = []
     for archivo in archivos:
-        df = pd.read_excel(archivo, header=8)
-        df = df.drop(columns=['Unnamed: 7', 'Unnamed: 8', 'Unnamed: 9', 'Unnamed: 21'])
-        df["N°. Doc. de cobro"] = df["N°. Doc. de cobro"]
-        df = df[["Fecha Solicitud de pago","N°. Doc. de cobro", " Valor Reclamado", "Valor pagado", "Valor Objetado", "I.V.A.", "Retención en la fuente", "I.C.A. - ImP. Ind y Ccio"]]
-        df["SUMA RETENCIONES"] = df["Retención en la fuente"] + df["I.C.A. - ImP. Ind y Ccio"]
-        df["VR. RECAUDADO"] = df["Valor pagado"] - df["Retención en la fuente"]
+        df = pd.read_excel(archivo, header=4)
+        fecha_transferencia = df.loc[df['RECLAMANTE:'] == "FECHA DE TRANSFERENCIA O DE CHEQUE:", df.columns[1]].values[0]
+        df["fecha_transferencia"] = pd.NA
+        df.at[3, "fecha_transferencia"] = "FECHA TRANSFERENCIA"
+        df.loc[4:, "fecha_transferencia"] = fecha_transferencia
+        df.columns = df.iloc[3]
+        df = df.iloc[4:].reset_index(drop=True)
+        df = df[["FECHA TRANSFERENCIA","N°. Doc. de cobro", " Valor Reclamado", "Valor pagado", "Valor Objetado", "I.V.A.", "Retención en la fuente", "I.C.A. - ImP. Ind y Ccio"]]
         df.dropna(inplace= True)
         
         df["NIT"] = nit
@@ -136,7 +138,7 @@ def procesar_previsora(archivos, nit,selection_entidad, plan_entidad):
         df["Archivo"] = archivo.name
         
         df = df.rename(columns={
-            "Fecha Solicitud de pago": "FECHA",
+            "FECHA TRANSFERENCIA": "FECHA",
             "N°. Doc. de cobro":"APLICA A FV",
             "I.V.A": "IVA",
             "Retención en la fuente":"(-) RETEF",
@@ -338,7 +340,6 @@ def procesar_nueva_eps(archivos, nit, selection_entidad, plan_entidad):
         df["ASEGURADORA"] = selection_entidad
         df["CASO"] = ""
         df["(-) RETEF"] = df["Valor Aplicación"] * 0.02
-        
 
 
 #PDF SECTION
