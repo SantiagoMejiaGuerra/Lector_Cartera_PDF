@@ -61,8 +61,10 @@ def procesar_axa(archivos, nit, selection_entidad, plan_entidad):
         df["CASO"] = ""
         df["IVA"] = 0
         df["VR. FACTURA"] = df["Valor Pagado Antes de Imp."]
-        df["VR. BRUTO TOMADO POR ASEGURADORA"] = df["Valor Pagado Antes de Imp."]
+        df["VR. BRUTO"] = df["Valor Pagado Antes de Imp."]
         df["Archivo"] = archivo.name
+        df["DIFERENCIA"] = df["VR. FACTURA"] - df["VR. BRUTO"]
+        df["SEDE"] = ""
         
         df = df.rename(columns={
             "Fecha de Pago": "FECHA",
@@ -73,9 +75,9 @@ def procesar_axa(archivos, nit, selection_entidad, plan_entidad):
             "Valor Pagado Despues de Imp.": "VR. RECAUDO"
         })
         
-        columnas_ordenadas=["FECHA", "NIT","PLAN", "ASEGURADORA", "CASO", "APLICA A FV",
-                            "VR. FACTURA", "VR. BRUTO TOMADO POR ASEGURADORA", "(-) RETEF",
-                            "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDO", "Archivo"]
+        columnas_ordenadas=["SEDE","FECHA", "NIT", "ASEGURADORA", "PLAN", "CASO", "APLICA A FV",
+                            "VR. FACTURA", "VR. BRUTO", "(-) RETEF",
+                            "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDO", "DIFERENCIA","Archivo"]
         
         df = df.reindex(columns=columnas_ordenadas, fill_value="")
         
@@ -100,18 +102,21 @@ def procesar_adres(archivos, nit, selection_entidad, plan_entidad):
         adres["(-) ICA"] = 0
         adres["IVA"] = 0
         adres["Archivo"] = archivo.name
+        adres["SEDE"] = ""
+        adres["DIFERENCIA"] = adres["Valor Reclamado"] - adres["Valor aprobado"]
         
         adres=adres.rename(columns={
             "Factura": "APLICA A FV",
             "Valor Reclamado": "VR. FACTURA",
-            "Valor aprobado": "VR. BRUTO TOMADO POR ASEGURADORA",
+            "Valor aprobado": "VR. BRUTO",
             "Retencion": "SUMA RETENCIONES",
             "Neto": "VR. RECAUDADO"
         })
         
-        columnas_ordenadas =["FECHA", "NIT", "PLAN", "ASEGURADORA", "CASO", "APLICA A FV",
-                            "VR. FACTURA", "VR. BRUTO TOMADO POR ASEGURADORA", "(-) RETEF", 
-                            "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", "Archivo"]
+        columnas_ordenadas =["SEDE","FECHA", "NIT", "ASEGURADORA", "PLAN", "CASO", "APLICA A FV",
+                            "VR. FACTURA", "VR. BRUTO", "(-) RETEF", "(-) ICA",
+                            "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", "DIFERENCIA",
+                            "Archivo"]
         
         adres = adres.reindex(columns=columnas_ordenadas, fill_value="")
         
@@ -136,6 +141,10 @@ def procesar_previsora(archivos, nit,selection_entidad, plan_entidad):
         df["ASEGURADORA"] = selection_entidad
         df["CASO"] = ""
         df["Archivo"] = archivo.name
+        df["SUMA RETENCIONES"] = df["Retención en la fuente"] - df["I.C.A. - ImP. Ind y Ccio"]
+        df["VR. RECAUDADO"] = df["Valor pagado"] - df["SUMA RETENCIONES"]
+        df["SEDE"] = ""
+        df["DIFERENCIA"] = df[" Valor Reclamado"] - df["Valor pagado"]
         
         df = df.rename(columns={
             "FECHA TRANSFERENCIA": "FECHA",
@@ -144,12 +153,13 @@ def procesar_previsora(archivos, nit,selection_entidad, plan_entidad):
             "Retención en la fuente":"(-) RETEF",
             "I.C.A. - ImP. Ind y Ccio": "(-) ICA",
             " Valor Reclamado": "VR. FACTURA",
-            "Valor pagado": "VR. BRUTO TOMADO POR ASEGURADORA"
+            "Valor pagado": "VR. BRUTO"
         })
         
-        columnas_ordenadas =["FECHA", "NIT", "PLAN", "ASEGURADORA", "CASO", "APLICA A FV",
-                            "VR. FACTURA", "VR. BRUTO TOMADO POR ASEGURADORA", "(-) RETEF", 
-                            "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", "Archivo"]
+        columnas_ordenadas =["SEDE","FECHA", "NIT", "ASEGURADORA", "PLAN", "CASO", "APLICA A FV",
+                            "VR. FACTURA", "VR. BRUTO", "(-) RETEF", "(-) ICA",
+                            "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", "DIFERENCIA",
+                            "Archivo"]
         
         df = df.reindex(columns=columnas_ordenadas, fill_value="")
         
@@ -172,19 +182,22 @@ def procesar_mundial(archivos, nit, selection_entidad, plan_entidad):
         df["CASO"] = ""
         df["Archivo"] = archivo.name
         df["IVA"] = 0
+        df["SEDE"] = ""
+        df["DIFERENCIA"] = df["VALOR RECLAMADO"] - df["VALOR APROBADO"]
         
         df = df.rename(columns={
             "FECHA PAGO": "FECHA",
             "FACTURA":"APLICA A FV",
             "VALOR RECLAMADO":"VR. FACTURA",
-            "VALOR APROBADO":"VR. BRUTO TOMADO POR ASEGURADORA",
+            "VALOR APROBADO":"VR. BRUTO",
             "Rete-Fuente":"(-) RETEF",
             "ICA": "(-) ICA",
             })
         
-        columnas_ordenadas=["FECHA", "NIT", "PLAN", "ASEGURADORA", "CASO", 
-                            "APLICA A FV", "VR. FACTURA", "VR. BRUTO TOMADO POR ASEGURADORA",
-                            "(-) RETEF", "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", "Archivo"]
+        columnas_ordenadas=["SEDE", "FECHA", "NIT", "ASEGURADORA", "PLAN", "CASO", 
+                            "APLICA A FV", "VR. FACTURA", "VR. BRUTO", "(-) RETEF",
+                            "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", 
+                            "DIFERENCIA", "Archivo"]
         
         df = df.reindex(columns=columnas_ordenadas, fill_value="")
         
@@ -247,11 +260,14 @@ def procesar_sura(archivos, nit, selection_entidad, plan_entidad):
         df["CASO"] = ""
         df["ARCHIVOS"] = archivo.name
         df["FECHA"] = pd.to_datetime(df["FECHA"], format="%Y%m%d").dt.date
-        df["VR. BRUTO TOMADO POR ASEGURADORA"] = df["VR. FACTURA"]
+        df["VR. BRUTO"] = df["VR. FACTURA"]
+        df["SEDE"] = ""
+        df["DIFERENCIA"] = df["VR. FACTURA"] - df["VR. BRUTO"]
         
-        columnas_ordenadas = ["FECHA", "NIT", "PLAN", "ASEGURADORA", "CASO", "APLICA A FV",
-                            "VR. FACTURA", "VR. BRUTO TOMADO POR ASEGURADORA", "(-) RETEF", 
-                            "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDADO",  "ARCHIVOS"]
+        columnas_ordenadas = ["SEDE","FECHA", "NIT", "ASEGURADORA", "PLAN", "CASO", "APLICA A FV",
+                            "VR. FACTURA", "VR. BRUTO", "(-) RETEF", "(-) ICA",
+                            "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", "DIFERENCIA", 
+                            "ARCHIVOS"]
         
         data.append(df[columnas_ordenadas])
         
@@ -268,11 +284,13 @@ def procesar_liberty(archivos, nit, selection_entidad, plan_entidad):
         df["PLAN"] = plan_entidad
         df["ASEGURADORA"] = selection_entidad
         df["CASO"] = ""
-        df["VR. BRUTO TOMADO POR ASEGURADORA"] = df["VALOR LIQUIDADO"]
+        df["VR. BRUTO"] = df["VALOR LIQUIDADO"]
         df["IVA"] = 0
         df["(-) ICA"] = 0
         df["SUMA RETENCIONES"] = df["VALOR RETEFUENTE"] + df["(-) ICA"]
         df["ARCHIVO"] = archivo.name
+        df["SEDE"] = ""
+        df["DIFERENCIA"] = df["VALOR LIQUIDADO"] - df["VR. BRUTO"]
         
         df = df.rename(columns={
             "FECHA GIRO": "FECHA",
@@ -282,9 +300,10 @@ def procesar_liberty(archivos, nit, selection_entidad, plan_entidad):
             "VALOR PAGADO":"VR. RECAUDADO"
         })
         
-        columnas_ordenadas = ["FECHA", "NIT", "PLAN", "ASEGURADORA", "CASO",
-                            "APLICA A FV", "VR. FACTURA", "VR. BRUTO TOMADO POR ASEGURADORA",
-                            "(-) RETEF", "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", "ARCHIVO"]
+        columnas_ordenadas = ["SEDE","FECHA", "NIT", "ASEGURADORA", "PLAN", "CASO",
+                            "APLICA A FV", "VR. FACTURA", "VR. BRUTO", "(-) RETEF",
+                            "(-) ICA", "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", 
+                            "DIFERENCIA","ARCHIVO"]
         
         df = df.reindex(columns=columnas_ordenadas, fill_value="")
         
@@ -307,9 +326,11 @@ def procesar_bolivar(archivos, nit, selection_entidad, plan_entidad):
         df["IVA"] = 0
         df["ARCHIVO"] = archivo.name
         
-        df["VR. BRUTO TOMADO POR ASEGURADORA"] = df["Valor pago"] / 0.98
-        df["(-) RETEF"] = df["VR. BRUTO TOMADO POR ASEGURADORA"] * 0.02
+        df["VR. BRUTO"] = df["Valor pago"] / 0.98
+        df["(-) RETEF"] = df["VR. BRUTO"] * 0.02
         df["SUMA RETENCIONES"] = df["(-) RETEF"] + df["Rte. ICA"]
+        df["SEDE"] = ""
+        df["DIFERENCIA"] = df["VR. FACTURA"] - df["VR. BRUTO"]
         
         df = df.rename(columns={
             "Fecha de Pago":"FECHA",
@@ -318,9 +339,9 @@ def procesar_bolivar(archivos, nit, selection_entidad, plan_entidad):
             "Rte. ICA":"(-) ICA",
         })
         
-        columnas_ordenadas=["FECHA", "NIT", "ASEGURADORA", "CASO", "APLICA A FV", "VR. FACTURA",
-                            "VR. BRUTO TOMADO POR ASEGURADORA", "(-) RETEF", "(-) ICA", "IVA",
-                            "SUMA RETENCIONES", "VR. RECAUDADO"]
+        columnas_ordenadas=["SEDE","FECHA", "NIT", "ASEGURADORA", "PLAN","CASO", "APLICA A FV",
+                            "VR. FACTURA","VR. BRUTO", "(-) RETEF", "(-) ICA", "IVA",
+                            "SUMA RETENCIONES", "VR. RECAUDADO", "DIFERENCIA", "ARCHIVO"]
         
         df = df.reindex(columns=columnas_ordenadas, fill_value="")
         
@@ -403,19 +424,21 @@ def procesar_seg_estado(archivos, nit, selection_entidad, plan_entidad):
                             valor_neto = float(match[2].replace(".", "").replace(",", "."))
                             
                             facturas.append({
+                                "SEDE": "",
                                 "FECHA": fecha_doc,
                                 "NIT":nit,
-                                "PLAN": plan_entidad,
                                 "ASEGURADORA": selection_entidad,
+                                "PLAN": plan_entidad,
                                 "CASO": "",
                                 "APLICA FV": match[0],
                                 "VR. FACTURA": 0,
-                                "VR. BRUTO TOMADO POR ASEGURADORA":valor_bruto,
+                                "VR. BRUTO":valor_bruto,
                                 "(-) RETEF": valor_bruto * 0.02,
                                 "(-) ICA":valor_bruto * 0.0066,
                                 "IVA": 0,
                                 "SUMA RETENCIONES":(valor_bruto *0.02) + (valor_bruto * 0.0066),
                                 "VR. RECAUDADO": valor_neto,
+                                "DIFERENCIA": 0 - valor_bruto,
                                 "Archivo": pdf_file.name
                             })
                         except Exception as e:
@@ -460,19 +483,21 @@ def procesar_equidad(archivos, nit, selection_entidad, plan_entidad):
                         bruto = neto_pagar / 0.98 if 0.98 !=0 else 0
                         
                         data.append({
+                            "SEDE": "",
                             "FECHA": fecha,
                             "NIT": nit,
-                            "PLAN": plan_entidad,
                             "ASEGURADORA":selection_entidad,
+                            "PLAN": plan_entidad,
                             "CASO":"",
                             "APLICA FV": factura[7],
                             "VR. FACTURA": 0,
-                            "VR. BRUTO TOMADO POR ASEGURADORA": bruto,
+                            "VR. BRUTO": bruto,
                             "(-) RETEF": bruto * 0.02,
                             "(-) ICA":0,
                             "IVA": 0,
                             "SUMA RETENCIONES": bruto * 0.02,
                             "VR. RECAUDADO": neto_pagar,
+                            "DIFERENCIA": 0 - bruto,
                             "Archivo": pdf_file.name
                         })
                     except Exception as e:
