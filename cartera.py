@@ -2,6 +2,7 @@ import pdfplumber
 import streamlit as st
 import pandas as pd
 import re
+import os
 from io import BytesIO
 
 @st.cache_data
@@ -50,20 +51,46 @@ def procesar_axa(archivos, nit, selection_entidad, plan_entidad):
     data = []
     for archivo in archivos:
         df = pd.read_excel(archivo)
-        df = df[["Fecha de Pago", "N° Factura", "Valor Pagado Antes de Imp.", "Valor Pagado Despues de Imp."]]
-        df["Retención"] = df["Valor Pagado Antes de Imp."] - df["Valor Pagado Despues de Imp."]
-        df["Rete. Servicios"] = df["Valor Pagado Antes de Imp."] * 0.02
-        df["ICA"] = df["Retención"] - df["Rete. Servicios"]
+        
+        columnas_originales = ["Fecha de Pago", "N° Factura",
+                            "Valor Pagado Antes de Imp.", 
+                            "Valor Pagado Despues de Imp."]
+                
+        if all(col in df.columns for col in columnas_originales):
+            df = df[columnas_originales]
+            df["Retención"] = df["Valor Pagado Antes de Imp."] - df["Valor Pagado Despues de Imp."]
+            df["Rete. Servicios"] = df["Valor Pagado Antes de Imp."] * 0.02
+            df["ICA"] = df["Retención"] - df["Rete. Servicios"]
+            df["IVA"] = 0
+            df["VR. FACTURA"] = df["Valor Pagado Antes de Imp."]
+            df["VR. BRUTO"] = df["Valor Pagado Antes de Imp."]
+            df["DIFERENCIA"] = df["VR. FACTURA"] - df["VR. BRUTO"]
+        else:
+            columnas_alternativas = ["FECHA_PAGO", "N° Factura", "Valor Pagado Antes de Imp.", "Valor Pagado Despues de Imp.", "RTE_FUENTE", "RETE_ICA", "RETE_IVA"]
+            
+            if all(col in df.columns for col in columnas_alternativas):
+                
+                df["Retención"] = df["Valor Pagado Antes de Imp."] - df["Valor Pagado Despues de Imp."]
+                df["VR. FACTURA"] = df["Valor Pagado Antes de Imp."]
+                df["VR. BRUTO"] = df["Valor Pagado Antes de Imp."]
+                df["DIFERENCIA"] = df["VR. FACTURA"] - df["VR. BRUTO"]
+                
+                df = df[columnas_alternativas].rename(columns={
+                    "FECHA_PAGO": "Fecha de Pago",
+                    "RTE_FUENTE":"Rete. Servicios",
+                    "RETE_ICA":"ICA",
+                    "RETE_IVA":"IVA"
+                })
+            else:
+                print(f"Archivo Excel {archivo.name} no tiene columnas validadas")
+                continue
+        
         
         df["NIT"] = nit
         df["PLAN"] = plan_entidad
         df["ASEGURADORA"] = selection_entidad
         df["CASO"] = ""
-        df["IVA"] = 0
-        df["VR. FACTURA"] = df["Valor Pagado Antes de Imp."]
-        df["VR. BRUTO"] = df["Valor Pagado Antes de Imp."]
         df["Archivo"] = archivo.name
-        df["DIFERENCIA"] = df["VR. FACTURA"] - df["VR. BRUTO"]
         df["SEDE"] = ""
         
         df = df.rename(columns={
