@@ -342,8 +342,35 @@ def procesar_bolivar(archivos, nit, selection_entidad, plan_entidad):
     data = []
     
     for archivo in archivos:
-        df = pd.read_excel(archivo)
-        df = df[["Fecha de Pago", "Detalle", "Rte. ICA", "Rte Fuente", "Valor pago"]]
+        
+        nombre_archivo = archivo.name
+        
+        if nombre_archivo.lower().endswith(('.xls', 'xlsx')):
+            df = pd.read_excel(archivo)
+        elif nombre_archivo.lower().endswith('.csv'):
+            df = pd.read_csv(archivo, encoding='latin-1', sep=";")
+            df["Valor pago"] = (
+            df["Valor pago"]
+            .astype(str)
+            .str.replace("$", "", regex=False)
+            .str.replace(",", "", regex=False)
+            .astype(float)
+            .round(0)
+            .astype(int)
+            )
+            split_data = df["Detalles"].str.split(n=1, expand=True)
+            df["Detalle"] = split_data[0]
+        else:
+            continue
+        
+        if nombre_archivo.lower().endswith('.csv'):
+            columnas = ["Fecha de Pago", "Rte. ICA", "Rte Fuente", 
+                        "Valor pago", "Detalle"]
+        else:
+            columnas = ["Fecha de Pago", "Detalle", "Rte. ICA", 
+                        "Rte Fuente", "Valor pago"]
+        
+        df = df[columnas]
         
         df["NIT"]=nit
         df["PLAN"]=plan_entidad
@@ -561,7 +588,7 @@ funcion_procesamiento = {
 }
 
 #Carga de archivos
-file_upload = st.file_uploader("Sube el archivo de la entidad seleccionada (Excel o PDF)", type=["xlsx", "pdf"],
+file_upload = st.file_uploader("Sube el archivo de la entidad seleccionada (Excel o PDF)", type=["xlsx", "pdf", "csv"],
                             accept_multiple_files=True)
 
 df_final = None
