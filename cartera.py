@@ -1,6 +1,7 @@
 import pdfplumber
 import streamlit as st
 import pandas as pd
+import numpy as np
 import re
 import os
 from io import BytesIO
@@ -55,35 +56,58 @@ def procesar_axa(archivos, nit, selection_entidad, plan_entidad):
         columnas_originales = ["Fecha de Pago", "N° Factura",
                             "Valor Pagado Antes de Imp.", 
                             "Valor Pagado Despues de Imp."]
+        
+        columnas_alt = ["No. FACTURA", "FECHA DE PAGO", "VALOR PAGADO DESPUES DE IMPUESTO ",
+        "VALOR PAGADO ANTES DE IMPUESTO "]
+        
+        columnas_alternativas = ["FECHA_PAGO", "N° Factura", "Valor Pagado Antes de Imp.", 
+                                "Valor Pagado Despues de Imp.", "RTE_FUENTE", "RETE_ICA", 
+                                "RETE_IVA"]
                 
         if all(col in df.columns for col in columnas_originales):
             df = df[columnas_originales]
             df["Retención"] = df["Valor Pagado Antes de Imp."] - df["Valor Pagado Despues de Imp."]
-            df["Rete. Servicios"] = df["Valor Pagado Antes de Imp."] * 0.02
+            df["Rete. Servicios"] = round(df["Valor Pagado Antes de Imp."] * 0.02)
             df["ICA"] = df["Retención"] - df["Rete. Servicios"]
             df["IVA"] = 0
             df["VR. FACTURA"] = df["Valor Pagado Antes de Imp."]
             df["VR. BRUTO"] = df["Valor Pagado Antes de Imp."]
             df["DIFERENCIA"] = df["VR. FACTURA"] - df["VR. BRUTO"]
-        else:
-            columnas_alternativas = ["FECHA_PAGO", "N° Factura", "Valor Pagado Antes de Imp.", "Valor Pagado Despues de Imp.", "RTE_FUENTE", "RETE_ICA", "RETE_IVA"]
             
-            if all(col in df.columns for col in columnas_alternativas):
+        elif all(col in df.columns for col in columnas_alt):
+            
+            df = df[columnas_alt].rename(columns={
+                "FECHA DE PAGO": "Fecha de Pago",
+                "No. FACTURA": "N° Factura",
+                "VALOR PAGADO DESPUES DE IMPUESTO ": "Valor Pagado Despues de Imp.",
+                "VALOR PAGADO ANTES DE IMPUESTO ":"Valor Pagado Antes de Imp."
+            })
+            
+            df["Retención"] = df["Valor Pagado Antes de Imp."] - df["Valor Pagado Despues de Imp."]
+            df["Rete. Servicios"] = round(df["Valor Pagado Antes de Imp."] * 0.02)
+            df["ICA"] = df["Retención"] - df["Rete. Servicios"]
+            df["IVA"] = 0
+            df["VR. FACTURA"] = df["Valor Pagado Antes de Imp."]
+            df["VR. BRUTO"] = df["Valor Pagado Antes de Imp."]
+            df["DIFERENCIA"] = df["VR. FACTURA"] - df["VR. BRUTO"]
+            
                 
-                df["Retención"] = df["Valor Pagado Antes de Imp."] - df["Valor Pagado Despues de Imp."]
-                df["VR. FACTURA"] = df["Valor Pagado Antes de Imp."]
-                df["VR. BRUTO"] = df["Valor Pagado Antes de Imp."]
-                df["DIFERENCIA"] = df["VR. FACTURA"] - df["VR. BRUTO"]
-                
-                df = df[columnas_alternativas].rename(columns={
-                    "FECHA_PAGO": "Fecha de Pago",
-                    "RTE_FUENTE":"Rete. Servicios",
-                    "RETE_ICA":"ICA",
-                    "RETE_IVA":"IVA"
-                })
-            else:
-                print(f"Archivo Excel {archivo.name} no tiene columnas validadas")
-                continue
+        elif all(col in df.columns for col in columnas_alternativas):
+            
+            df["Retención"] = df["Valor Pagado Antes de Imp."] - df["Valor Pagado Despues de Imp."]
+            df["VR. FACTURA"] = df["Valor Pagado Antes de Imp."]
+            df["VR. BRUTO"] = df["Valor Pagado Antes de Imp."]
+            df["DIFERENCIA"] = df["VR. FACTURA"] - df["VR. BRUTO"]
+            
+            df = df[columnas_alternativas].rename(columns={
+                "FECHA_PAGO": "Fecha de Pago",
+                "RTE_FUENTE":"Rete. Servicios",
+                "RETE_ICA":"ICA",
+                "RETE_IVA":"IVA"
+            })
+        else:
+            print(f"Archivo Excel {archivo.name} no tiene columnas validadas")
+            continue
         
         
         df["NIT"] = nit
@@ -381,7 +405,7 @@ def procesar_bolivar(archivos, nit, selection_entidad, plan_entidad):
         df["ARCHIVO"] = archivo.name
         
         df["VR. BRUTO"] = df["Valor pago"] / 0.98
-        df["(-) RETEF"] = df["VR. BRUTO"] * 0.02
+        df["(-) RETEF"] = round(df["VR. BRUTO"] * 0.02)
         df["SUMA RETENCIONES"] = df["(-) RETEF"] + df["Rte. ICA"]
         df["SEDE"] = ""
         df["DIFERENCIA"] = df["VR. FACTURA"] - df["VR. BRUTO"]
@@ -487,10 +511,10 @@ def procesar_seg_estado(archivos, nit, selection_entidad, plan_entidad):
                                 "APLICA FV": match[0],
                                 "VR. FACTURA": 0,
                                 "VR. BRUTO":valor_bruto,
-                                "(-) RETEF": valor_bruto * 0.02,
-                                "(-) ICA":valor_bruto * 0.0066,
+                                "(-) RETEF": round(valor_bruto * 0.02, 2),
+                                "(-) ICA":round(valor_bruto * 0.0066),
                                 "IVA": 0,
-                                "SUMA RETENCIONES":(valor_bruto *0.02) + (valor_bruto * 0.0066),
+                                "SUMA RETENCIONES":round((valor_bruto *0.02) + (valor_bruto * 0.0066)),
                                 "VR. RECAUDADO": valor_neto,
                                 "DIFERENCIA": 0 - valor_bruto,
                                 "Archivo": pdf_file.name
@@ -546,10 +570,10 @@ def procesar_equidad(archivos, nit, selection_entidad, plan_entidad):
                             "APLICA FV": factura[7],
                             "VR. FACTURA": 0,
                             "VR. BRUTO": bruto,
-                            "(-) RETEF": bruto * 0.02,
+                            "(-) RETEF": round(bruto * 0.02),
                             "(-) ICA":0,
                             "IVA": 0,
-                            "SUMA RETENCIONES": bruto * 0.02,
+                            "SUMA RETENCIONES": round(bruto * 0.02),
                             "VR. RECAUDADO": neto_pagar,
                             "DIFERENCIA": 0 - bruto,
                             "Archivo": pdf_file.name
@@ -588,7 +612,7 @@ funcion_procesamiento = {
 }
 
 #Carga de archivos
-file_upload = st.file_uploader("Sube el archivo de la entidad seleccionada (Excel o PDF)", type=["xlsx", "pdf", "csv"],
+file_upload = st.file_uploader("Sube el archivo de la entidad seleccionada (Excel o PDF)", type=["xls","xlsx", "pdf", "csv"],
                             accept_multiple_files=True)
 
 df_final = None
