@@ -177,43 +177,80 @@ def procesar_adres(archivos, nit, selection_entidad, plan_entidad):
 def procesar_previsora(archivos, nit,selection_entidad, plan_entidad):
     data = []
     for archivo in archivos:
-        df = pd.read_excel(archivo, header=4)
-        fecha_transferencia = df.loc[df['RECLAMANTE:'] == "FECHA DE TRANSFERENCIA O DE CHEQUE:", df.columns[1]].values[0]
-        df["fecha_transferencia"] = pd.NA
-        df.at[3, "fecha_transferencia"] = "FECHA TRANSFERENCIA"
-        df.loc[4:, "fecha_transferencia"] = fecha_transferencia
-        df.columns = df.iloc[3]
-        df = df.iloc[4:].reset_index(drop=True)
-        df = df[["FECHA TRANSFERENCIA","N°. Doc. de cobro", " Valor Reclamado", "Valor pagado", "Valor Objetado", "I.V.A.", "Retención en la fuente", "I.C.A. - ImP. Ind y Ccio"]]
-        df.dropna(inplace= True)
         
-        df["NIT"] = nit
-        df["PLAN"] = plan_entidad
-        df["ASEGURADORA"] = selection_entidad
-        df["CASO"] = ""
-        df["Archivo"] = archivo.name
-        df["SUMA RETENCIONES"] = df["Retención en la fuente"] - df["I.C.A. - ImP. Ind y Ccio"]
-        df["VR. RECAUDADO"] = df["Valor pagado"] - df["SUMA RETENCIONES"]
-        df["SEDE"] = ""
-        df["DIFERENCIA"] = df[" Valor Reclamado"] - df["Valor pagado"]
+        df_init = pd.read_excel(archivo, header = None, nrows=10)
         
-        df = df.rename(columns={
-            "FECHA TRANSFERENCIA": "FECHA",
-            "N°. Doc. de cobro":"APLICA A FV",
-            "I.V.A": "IVA",
-            "Retención en la fuente":"(-) RETEF",
-            "I.C.A. - ImP. Ind y Ccio": "(-) ICA",
-            " Valor Reclamado": "VR. FACTURA",
-            "Valor pagado": "VR. BRUTO"
-        })
-        
-        columnas_ordenadas =["SEDE","FECHA", "NIT", "ASEGURADORA", "PLAN", "CASO", "APLICA A FV",
-                            "VR. FACTURA", "VR. BRUTO", "(-) RETEF", "(-) ICA",
-                            "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", "DIFERENCIA",
-                            "Archivo"]
-        
-        df = df.reindex(columns=columnas_ordenadas, fill_value="")
-        
+        if (df_init == "RECLAMANTE:").any().any():
+            df = pd.read_excel(archivo, header=4)
+            fecha_transferencia = df.loc[df['RECLAMANTE:'] == "FECHA DE TRANSFERENCIA O DE CHEQUE:", 
+                                        df.columns[1]].values[0]
+            df["fecha_transferencia"] = pd.NA
+            df.at[3, "fecha_transferencia"] = "FECHA TRANSFERENCIA"
+            df.loc[4:, "fecha_transferencia"] = fecha_transferencia
+            df.columns = df.iloc[3]
+            df = df.iloc[4:].reset_index(drop=True)
+            df = df[["FECHA TRANSFERENCIA","N°. Doc. de cobro", " Valor Reclamado", "Valor pagado", "Valor Objetado", "I.V.A.", "Retención en la fuente", "I.C.A. - ImP. Ind y Ccio"]]
+            df.dropna(inplace= True)
+            
+            df["NIT"] = nit
+            df["PLAN"] = plan_entidad
+            df["ASEGURADORA"] = selection_entidad
+            df["CASO"] = ""
+            df["Archivo"] = archivo.name
+            df["SUMA RETENCIONES"] = df["Retención en la fuente"] + df["I.C.A. - ImP. Ind y Ccio"]
+            df["VR. RECAUDADO"] = df["Valor pagado"] - df["SUMA RETENCIONES"]
+            df["SEDE"] = ""
+            df["DIFERENCIA"] = df[" Valor Reclamado"] - df["Valor pagado"]
+            
+            df = df.rename(columns={
+                "FECHA TRANSFERENCIA": "FECHA",
+                "N°. Doc. de cobro":"APLICA A FV",
+                "I.V.A": "IVA",
+                "Retención en la fuente":"(-) RETEF",
+                "I.C.A. - ImP. Ind y Ccio": "(-) ICA",
+                " Valor Reclamado": "VR. FACTURA",
+                "Valor pagado": "VR. BRUTO"
+            })
+            
+            columnas_ordenadas =["SEDE","FECHA", "NIT", "ASEGURADORA", "PLAN", "CASO", "APLICA A FV",
+                                "VR. FACTURA", "VR. BRUTO", "(-) RETEF", "(-) ICA",
+                                "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", "DIFERENCIA",
+                                "Archivo"]
+            
+            df = df.reindex(columns=columnas_ordenadas, fill_value="")
+        else :
+            df = pd.read_excel(archivo)
+            df = df[["Fecha", "Factura", "Valor_Factura", "Este_Pago", 
+                    "ImpValorIVA", "ImpValorReteICA", "ImpValorReteFuente"]]
+            
+            df["NIT"] = nit
+            df["PLAN"] = plan_entidad
+            df["ASEGURADORA"] = selection_entidad
+            df["CASO"] = ""
+            df["Archivo"] = archivo.name
+            df["SUMA RETENCIONES"] = df["ImpValorReteFuente"] + df["ImpValorReteICA"]
+            df["VR. RECAUDADO"] = df["Este_Pago"] - df["SUMA RETENCIONES"]
+            df["SEDE"] = ""
+            df["DIFERENCIA"] = df["Valor_Factura"] - df["Este_Pago"]
+            
+            df =df.rename(columns={
+                "Fecha":"FECHA",
+                "Factura": "APLICA A FV",
+                "ImpValorIVA": "IVA",
+                "ImpValorReteICA": "(-) ICA",
+                "ImpValorReteFuente": "(-) RETEF",
+                "Este_Pago": "VR. BRUTO",
+                "Valor_Factura": "VR. FACTURA"
+            })
+            
+            columnas_ordenadas =["SEDE","FECHA", "NIT", "ASEGURADORA", "PLAN", "CASO", "APLICA A FV",
+                                "VR. FACTURA", "VR. BRUTO", "(-) RETEF", "(-) ICA",
+                                "IVA", "SUMA RETENCIONES", "VR. RECAUDADO", "DIFERENCIA",
+                                "Archivo"]
+            
+            df = df.reindex(columns=columnas_ordenadas, fill_value="")
+            
+            
         data.append(df)
         
     return pd.concat(data, ignore_index=True)
@@ -275,24 +312,27 @@ def procesar_sura(archivos, nit, selection_entidad, plan_entidad):
         }
     
     for archivo in archivos:
-        
-        archivo.seek(0)
-        df = pd.read_excel(archivo, header=None)
-        
-        # Search 'Beneficiario' for any part of the sheet
-        header_row = None
-        
-        for idx, row in df.iterrows():
-            clean_row= [str(cell).strip().lower() for cell in row.fillna('')]
-            if 'expediente' in clean_row:
-                header_row = idx
-                break
-        
-        if header_row is None:
-            header_row = df.dropna(how='all').index[0]
-        
-        archivo.seek(0)
-        df = pd.read_excel(archivo, header=header_row)
+        if archivo.name.endswith('.CSV'):
+            df = pd.read_csv(archivo, encoding='latin-1', sep=";", header=1, index_col=False)
+        else:
+            archivo.seek(0)
+            df = pd.read_excel(archivo, header=None)
+            
+            # Search 'Beneficiario' for any part of the sheet
+            header_row = None
+            
+            for idx, row in df.iterrows():
+                clean_row= [str(cell).strip().lower() for cell in row.fillna('')]
+                if 'expediente' in clean_row:
+                    header_row = idx
+                    break
+            
+            if header_row is None:
+                header_row = df.dropna(how='all').index[0]
+            
+            archivo.seek(0)
+            df = pd.read_excel(archivo, header=header_row)
+            
         df.columns = df.columns.astype(str).str.strip()
         
         missing_cols = [col for col in columns_requires if col not in df.columns]
@@ -328,8 +368,31 @@ def procesar_liberty(archivos, nit, selection_entidad, plan_entidad):
     data = []
     
     for archivo in archivos:
-        df = pd.read_excel(archivo)
-        df = df[["FECHA GIRO" ,"NRO FACTURA", "VALOR LIQUIDADO", "VALOR RETEFUENTE", "VALOR PAGADO"]]
+        
+        nombre_archivo = archivo.name
+        
+        if nombre_archivo.lower().endswith(('.xls', '.xlsx')):
+            df = pd.read_excel(archivo)
+        elif nombre_archivo.lower().endswith('.csv'):
+            df = pd.read_csv(archivo)
+        else:
+            continue
+        
+        if nombre_archivo.lower().endswith('.csv'):
+            rename_columns = {"Fecha_Pago": "FECHA GIRO", 
+                            "No_Factura": "NRO FACTURA", 
+                            "Valor_Pagado": "VALOR PAGADO",
+                            "Valor_Ret":"VALOR RETEFUENTE", 
+                            "Valor_Base":"VALOR LIQUIDADO"}
+            
+        else:
+            rename_columns = {"FECHA GIRO": "FECHA GIRO" ,
+                            "NRO FACTURA": "NRO FACTURA", 
+                            "VALOR LIQUIDADO": "VALOR LIQUIDADO", 
+                            "VALOR RETEFUENTE":"VALOR RETEFUENTE", 
+                            "VALOR PAGADO" : "VALOR PAGADO"}
+        
+        df.rename(columns=rename_columns, inplace=True)
         
         df["NIT"] = nit
         df["PLAN"] = plan_entidad
@@ -369,7 +432,7 @@ def procesar_bolivar(archivos, nit, selection_entidad, plan_entidad):
         
         nombre_archivo = archivo.name
         
-        if nombre_archivo.lower().endswith(('.xls', 'xlsx')):
+        if nombre_archivo.lower().endswith(('.xls', '.xlsx')):
             df = pd.read_excel(archivo)
         elif nombre_archivo.lower().endswith('.csv'):
             df = pd.read_csv(archivo, encoding='latin-1', sep=";")
