@@ -312,9 +312,10 @@ def procesar_sura(archivos, nit, selection_entidad, plan_entidad):
         }
     
     for archivo in archivos:
-        if archivo.name.endswith('.CSV'):
+        
+        if archivo.name.lower().endswith("csv"):
             df = pd.read_csv(archivo, encoding='latin-1', sep=";", header=1, index_col=False)
-        else:
+        else: 
             archivo.seek(0)
             df = pd.read_excel(archivo, header=None)
             
@@ -557,7 +558,7 @@ def procesar_seg_estado(archivos, nit, selection_entidad, plan_entidad):
                         except Exception as e:
                             print(f"Error procesando fecha : {str(e)}")
                     
-                    matches = re.findall(r"(\d{6,8})\s+\$\s*([\d.,]+)\s+\$\s*([\d.,]+)", total_text)
+                    matches = re.findall(r"(\d{5,8})\s+\$\s*([\d.,]+)\s+\$\s*([\d.,]+)", total_text)
                     
                     for match in matches:
                         try:
@@ -661,7 +662,7 @@ funcion_procesamiento = {
     "LA PREVISORA S A COMPANIA DE SEGURO": procesar_previsora,
     "COMPAÑIA MUNDIAL DE SEGUROS SA": procesar_mundial,
     "SEGUROS GENERALES SURAMERICANA SA": procesar_sura,
-    "EPS SURAMERICANA": procesar_sura,
+    "EPS SURAMERICANA SA": procesar_sura,
     "EPS Y MEDICINA PREPAGADA SURAMETICANA S A":procesar_sura,
     "SEGUROS DE VIDA SURAMERICANA SA": procesar_sura,
     "LIBERTY SEGUROS SA": procesar_liberty,
@@ -675,15 +676,38 @@ funcion_procesamiento = {
 }
 
 #Carga de archivos
-file_upload = st.file_uploader("Sube el archivo de la entidad seleccionada (Excel o PDF)", type=["xls","xlsx", "pdf", "csv"],
+file_upload = st.file_uploader("Sube el archivo de la entidad seleccionada (Excel, PDF o CSV)", type= None,
                             accept_multiple_files=True)
 
 df_final = None
+archivos_process = []
 
-if st.button("Procesar Archivos") and file_upload and selection_entidad in funcion_procesamiento:
-    st.write(f"Procesando archivos para {selection_entidad}...")
+if file_upload:
+    allowed_extensions = {".xls", ".xlsx", ".pdf", ".csv"}
+    archivos_val = []
+    archivos_inval = []
+
+    for archivo in file_upload:
+        try:
+            file_ext = os.path.splitext(archivo.name)[1].lower()
+            if file_ext in allowed_extensions:
+                archivos_val.append(archivo)
+            else:
+                archivos_inval.append(archivo.name)
+
+        except Exception as e:
+            st.error(f"Error procesando el nombre del arhcivo {archivo.name}: {e}")
+            archivos_inval.append(f"{archivo.name} (error lectura nombre)")
     
-    df_final = funcion_procesamiento[selection_entidad](file_upload, nit, selection_entidad, plan_entidad)
+    if archivos_inval:
+        st.warning(f"Archivos omitidos por extensión no permitida o error {', '.join(archivos_inval)}")
+    
+    archivos_process = archivos_val
+
+if st.button("Procesar Archivos") and archivos_process and selection_entidad in funcion_procesamiento:
+    st.write(f"Procesando {len(archivos_process)} archivos válidos para {selection_entidad}...")
+    
+    df_final = funcion_procesamiento[selection_entidad](archivos_process, nit, selection_entidad, plan_entidad)
     
     st.subheader("Vista previa de los datos procesados")
     st.dataframe(df_final)
