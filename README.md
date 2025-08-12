@@ -1,5 +1,4 @@
 # Procesador de Documentos PDF - Área de Cartera 🏦
-
 **SEGUROS DEL ESTADO**
 *Sistema de Extracción Automatizado de Datos de Facturas en PDF*
 
